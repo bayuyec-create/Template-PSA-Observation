@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laporan Observasi Public Speaking - Smart Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Poppins', sans-serif; background-color: #F3F4F6; color: #1F2937; }
+        .chart-container { position: relative; width: 100%; max-width: 600px; margin-left: auto; margin-right: auto; height: 350px; max-height: 400px; }
+        @media (min-width: 768px) { .chart-container { height: 400px; } }
+        .card-shadow { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
+        .gradient-text { background-clip: text; -webkit-background-clip: text; color: transparent; background-image: linear-gradient(to right, #4F46E5, #EC4899); }
+        
+        /* Editable Areas Styling */
+        [contenteditable="true"] {
+            transition: all 0.2s;
+            border-radius: 4px;
+            padding: 2px;
+        }
+        [contenteditable="true"]:hover {
+            background-color: rgba(255, 255, 150, 0.2);
+            cursor: text;
+            outline: 1px dashed #cbd5e1;
+        }
+        [contenteditable="true"]:focus {
+            background-color: #fff;
+            outline: 2px solid #4F46E5;
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+        }
+
+        /* Print Styles */
+        @media print {
+            .no-print { display: none !important; }
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background-color: white; }
+            .card-shadow { box-shadow: none; border: 1px solid #eee; break-inside: avoid; }
+            header { position: static; box-shadow: none; border-bottom: 1px solid #eee; }
+            canvas { max-width: 100% !important; }
+            input[type="file"] { display: none; }
+            [contenteditable="true"]:hover { background: none; outline: none; }
+        }
+    </style>
+</head>
+<body class="antialiased pb-20">
+
+    <!-- CONTROL PANEL (NO PRINT) -->
+    <div class="no-print bg-gray-900 text-white p-6 shadow-xl sticky top-0 z-[100] border-b-4 border-indigo-500">
+        <div class="max-w-6xl mx-auto">
+            <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4">
+                <div>
+                    <h2 class="text-xl font-bold text-indigo-400 flex items-center gap-2">
+                        <span>🤖</span> Smart Report Generator
+                    </h2>
+                    <p class="text-xs text-gray-400 mt-1">Isi data, atur skor, lalu klik tombol "Generate" untuk membuat narasi otomatis.</p>
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="generateNarrative()" class="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-bold py-2 px-6 rounded-lg shadow-lg transition transform hover:scale-105 flex items-center gap-2 border border-white/20">
+                        <span>✨</span> Buat Narasi Otomatis
+                    </button>
+                    <button onclick="window.print()" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg shadow transition flex items-center gap-2">
+                        <span>🖨️</span> Simpan PDF
+                    </button>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 bg-gray-800 p-5 rounded-xl border border-gray-700">
+                <!-- Identitas -->
+                <div class="space-y-3">
+                    <label class="text-xs font-bold uppercase text-gray-400 tracking-wider">Nama Siswa</label>
+                    <input type="text" id="input-name" placeholder="Nama Siswa" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded focus:outline-none focus:ring-2 focus:ring-indigo-500" oninput="updateIdentity()">
+                    
+                    <label class="text-xs font-bold uppercase text-gray-400 tracking-wider">Kelas</label>
+                    <input type="text" id="input-class" placeholder="Level Basic" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded focus:outline-none focus:ring-2 focus:ring-indigo-500" oninput="updateIdentity()">
+                </div>
+                
+                <!-- Skor Grafik -->
+                <div class="col-span-1 md:col-span-2 lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Vokal Input -->
+                    <div class="bg-gray-700/50 p-3 rounded-lg border border-gray-600">
+                        <label class="text-xs font-bold uppercase text-indigo-300 flex justify-between mb-2">
+                            Suara/Vokal <span id="val-vokal" class="bg-indigo-600 px-2 rounded text-white">1</span>
+                        </label>
+                        <input type="range" id="input-vokal" min="1" max="4" step="1" value="1" class="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-indigo-500" oninput="updateChartData()">
+                        <div class="flex justify-between text-[10px] text-gray-500 mt-1">
+                            <span>Lirih</span>
+                            <span>Lantang</span>
+                        </div>
+                    </div>
+
+                    <!-- Gestur Input -->
+                    <div class="bg-gray-700/50 p-3 rounded-lg border border-gray-600">
+                        <label class="text-xs font-bold uppercase text-pink-300 flex justify-between mb-2">
+                            Tubuh/Gestur <span id="val-gestur" class="bg-pink-600 px-2 rounded text-white">1</span>
+                        </label>
+                        <input type="range" id="input-gestur" min="1" max="4" step="1" value="1" class="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-pink-500" oninput="updateChartData()">
+                        <div class="flex justify-between text-[10px] text-gray-500 mt-1">
+                            <span>Kaku</span>
+                            <span>Luues</span>
+                        </div>
+                    </div>
+
+                    <!-- Emosi Input -->
+                    <div class="bg-gray-700/50 p-3 rounded-lg border border-gray-600">
+                        <label class="text-xs font-bold uppercase text-amber-300 flex justify-between mb-2">
+                            Emosi/Ekspresi <span id="val-emosi" class="bg-amber-600 px-2 rounded text-white">1</span>
+                        </label>
+                        <input type="range" id="input-emosi" min="1" max="4" step="1" value="1" class="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-amber-500" oninput="updateChartData()">
+                        <div class="flex justify-between text-[10px] text-gray-500 mt-1">
+                            <span>Datar</span>
+                            <span>Menjiwai</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- REPORT CONTENT STARTS HERE -->
+    
+    <!-- Header Section (Title only) -->
+    <div class="bg-white shadow-sm print:hidden">
+        <div class="max-w-6xl mx-auto px-4 py-2 flex justify-between items-center">
+            <div class="text-sm font-medium text-gray-400">Preview Dokumen Laporan</div>
+        </div>
+    </div>
+
+    <!-- Hero / Profile -->
+    <section class="max-w-6xl mx-auto px-4 py-10">
+        <div class="bg-white rounded-2xl card-shadow overflow-hidden">
+            <div class="bg-gradient-to-r from-indigo-600 to-purple-600 p-10 text-white flex flex-col items-center text-center">
+                
+                <!-- Foto Profile Area -->
+                <div class="flex-shrink-0 mb-6 relative group">
+                    <div class="w-48 h-48 md:w-64 md:h-64 bg-white/20 backdrop-blur-sm rounded-full border-8 border-white/30 flex items-center justify-center overflow-hidden shadow-2xl relative transition-transform hover:scale-105 duration-300">
+                        <img id="profile-img" src="https://placehold.co/600x600/png?text=Klik+Upload" alt="Foto Siswa" class="w-full h-full object-cover">
+                    </div>
+                    
+                    <!-- Upload Button Overlay -->
+                    <label for="photo-upload" class="no-print absolute bottom-2 right-4 bg-white text-indigo-600 p-3 rounded-full cursor-pointer shadow-lg hover:bg-gray-100 transition transform hover:scale-110" title="Ganti Foto">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <input type="file" id="photo-upload" class="hidden" accept="image/*" onchange="updatePhoto(this)">
+                    </label>
+                </div>
+
+                <!-- Text Info -->
+                <div class="mb-6 max-w-2xl">
+                    <h1 id="display-name" class="text-3xl md:text-5xl font-bold mb-3 tracking-tight">Ken Luana Maesya Nugraha</h1>
+                    <div class="inline-block bg-white/20 rounded-full px-6 py-2 mt-2">
+                        <p id="display-class" class="text-indigo-50 text-lg md:text-xl font-medium">Kelas 2 SD • Level Basic</p>
+                    </div>
+                </div>
+
+                <!-- Date Badge -->
+                <div class="bg-white/10 backdrop-blur-md rounded-lg px-8 py-3 border border-white/20 inline-block">
+                    <p class="text-xs md:text-sm font-light uppercase tracking-wider opacity-80 mb-1">TANGGAL LAPORAN</p>
+                    <p class="text-lg md:text-xl font-bold" contenteditable="true">Februari 2026</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- AUTOMATIC NARRATIVE SECTION -->
+    <section class="max-w-6xl mx-auto px-4 mt-8 break-inside-avoid">
+        <div class="bg-white rounded-xl card-shadow p-8 border-l-8 border-indigo-600">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+                <span class="text-3xl mr-3">📝</span> Catatan Observasi & Evaluasi
+            </h2>
+            <!-- ID added for AI population -->
+            <div id="observation-text" class="prose max-w-none text-gray-700 leading-relaxed whitespace-pre-wrap" contenteditable="true" style="min-height: 150px;">
+                <span class="text-gray-400 italic">...Teks evaluasi akan muncul di sini setelah Anda mengatur skor di atas dan menekan tombol "✨ Buat Narasi Otomatis"...</span>
+            </div>
+            <p class="text-xs text-gray-400 mt-2 italic no-print">*Anda tetap bisa mengedit teks di atas secara manual setelah digenerate.</p>
+        </div>
+    </section>
+
+    <!-- Section: Technical Analysis & Radar Chart -->
+    <section class="max-w-6xl mx-auto px-4 py-8 break-inside-avoid">
+        <h2 class="text-2xl font-bold text-gray-800 mb-6 pl-4 border-l-4 border-pink-500">Analisis Teknis</h2>
+        <div class="bg-white rounded-2xl card-shadow p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                <!-- Chart Column -->
+                <div class="flex flex-col items-center">
+                    <div class="chart-container">
+                        <canvas id="skillsRadarChart"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Context Column (Auto-Populated Context) -->
+                <div class="space-y-4">
+                    <div class="bg-gray-50 p-4 rounded-lg border-l-4 border-pink-400">
+                        <h4 class="font-bold text-gray-800 mb-1">Teknik Vokal (Suara)</h4>
+                        <p id="ctx-vokal" class="text-sm text-gray-600" contenteditable="true">Analisis vokal akan muncul di sini...</p>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded-lg border-l-4 border-indigo-400">
+                        <h4 class="font-bold text-gray-800 mb-1">Bahasa Tubuh (Gesture)</h4>
+                        <p id="ctx-gestur" class="text-sm text-gray-600" contenteditable="true">Analisis gestur akan muncul di sini...</p>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded-lg border-l-4 border-amber-400">
+                        <h4 class="font-bold text-gray-800 mb-1">Ekspresi Emosi</h4>
+                        <p id="ctx-emosi" class="text-sm text-gray-600" contenteditable="true">Analisis ekspresi akan muncul di sini...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- AUTOMATIC ADVICE SECTION -->
+    <section class="max-w-6xl mx-auto px-4 mt-4 mb-8 break-inside-avoid">
+        <div class="bg-white rounded-xl card-shadow p-8 border-l-8 border-amber-500">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+                <span class="text-3xl mr-3">💡</span> Saran Pengembangan (Rekomendasi)
+            </h2>
+            <!-- ID added for AI population -->
+            <div id="advice-text" class="prose max-w-none text-gray-700 leading-relaxed whitespace-pre-wrap" contenteditable="true">
+                <span class="text-gray-400 italic">...Saran pengembangan akan muncul otomatis di sini...</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Action Plan Matrix -->
+    <section class="max-w-6xl mx-auto px-4 py-8 break-inside-avoid">
+        <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">Matriks Latihan (Action Plan)</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- Teacher's Role -->
+            <div class="bg-white rounded-2xl card-shadow overflow-hidden">
+                <div class="bg-indigo-600 p-4 text-white font-bold text-lg text-center" contenteditable="true">A. Strategi di Kelas (Pengajar)</div>
+                <div class="p-6 space-y-6">
+                    <div class="flex">
+                        <div class="flex-shrink-0 h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-sm">1</div>
+                        <div class="ml-3">
+                            <h4 id="plan-teach-1-title" class="font-bold text-gray-800 text-sm" contenteditable="true">Metode Bertahap</h4>
+                            <p id="plan-teach-1-desc" class="text-xs text-gray-600 mt-1" contenteditable="true">Berikan tugas ringan di awal untuk membangun kenyamanan.</p>
+                        </div>
+                    </div>
+                    <div class="flex">
+                        <div class="flex-shrink-0 h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-sm">2</div>
+                        <div class="ml-3">
+                            <h4 id="plan-teach-2-title" class="font-bold text-gray-800 text-sm" contenteditable="true">Pendampingan</h4>
+                            <p id="plan-teach-2-desc" class="text-xs text-gray-600 mt-1" contenteditable="true">Hindari memaksa siswa tampil sendiri jika belum siap.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Parents' Role -->
+            <div class="bg-white rounded-2xl card-shadow overflow-hidden">
+                <div class="bg-pink-500 p-4 text-white font-bold text-lg text-center" contenteditable="true">B. Latihan di Rumah (Orang Tua)</div>
+                <div class="p-6 space-y-6">
+                    <div class="flex">
+                        <div class="flex-shrink-0 h-8 w-8 rounded-full bg-pink-100 flex items-center justify-center text-pink-600 font-bold text-sm">1</div>
+                        <div class="ml-3">
+                            <h4 id="plan-parent-1-title" class="font-bold text-gray-800 text-sm" contenteditable="true">Latihan Cermin</h4>
+                            <p id="plan-parent-1-desc" class="text-xs text-gray-600 mt-1" contenteditable="true">Ajak anak bercerita singkat di depan cermin.</p>
+                        </div>
+                    </div>
+                    <div class="flex">
+                        <div class="flex-shrink-0 h-8 w-8 rounded-full bg-pink-100 flex items-center justify-center text-pink-600 font-bold text-sm">2</div>
+                        <div class="ml-3">
+                            <h4 id="plan-parent-2-title" class="font-bold text-gray-800 text-sm" contenteditable="true">Apresiasi</h4>
+                            <p id="plan-parent-2-desc" class="text-xs text-gray-600 mt-1" contenteditable="true">Puji keberanian anak setiap kali ia berani bersuara.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-gray-300 py-6 mt-10 break-inside-avoid">
+        <div class="max-w-4xl mx-auto px-4 text-center">
+            <p class="text-xs text-gray-500">© 2026 Public Speaking for Kids Program. Generated Report.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Init Inputs
+        document.getElementById('input-name').value = "Ken Luana Maesya Nugraha";
+        document.getElementById('input-class').value = "Kelas 2 SD • Level Basic";
+
+        // Photo Upload Logic
+        function updatePhoto(input) {
+            if (input.files && input.files[0]) {
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('profile-img').src = e.target.result;
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        // Identity Update
+        function updateIdentity() {
+            const name = document.getElementById('input-name').value;
+            const cls = document.getElementById('input-class').value;
+            document.getElementById('display-name').innerText = name || "Nama Siswa";
+            document.getElementById('display-class').innerText = cls || "Kelas / Level";
+        }
+
+        // --- Chart Logic ---
+        let radarChart; 
+        
+        function updateChartData() {
+            const vokal = parseInt(document.getElementById('input-vokal').value);
+            const gestur = parseInt(document.getElementById('input-gestur').value);
+            const emosi = parseInt(document.getElementById('input-emosi').value);
+
+            // Update Panel Displays
+            document.getElementById('val-vokal').innerText = vokal;
+            document.getElementById('val-gestur').innerText = gestur;
+            document.getElementById('val-emosi').innerText = emosi;
+
+            // Update Chart
+            if(radarChart) {
+                radarChart.data.datasets[0].data = [vokal, gestur, emosi];
+                radarChart.update();
+            }
+        }
+
+        // --- AI LOGIC: NARRATIVE GENERATOR ---
+        const narrativeDB = {
+            vokal: {
+                1: { text: "Suara masih terdengar lirih/berbisik dan sering tertutup masker atau tangan.", advice: "Perlu latihan teriak A-I-U-E-O." },
+                2: { text: "Volume suara cukup terdengar untuk teman sebangku, namun belum menjangkau seluruh ruangan.", advice: "Latihan membaca buku dengan suara lantang." },
+                3: { text: "Volume suara sudah jelas dan artikulasi kata dapat dipahami dengan baik.", advice: "Mulai pelajari penekanan kata (intonasi)." },
+                4: { text: "Suara sangat lantang, bulat, dan percaya diri. Artikulasi sempurna.", advice: "Pertahankan dan eksplorasi variasi kecepatan bicara." }
+            },
+            gestur: {
+                1: { text: "Tubuh terlihat kaku, sering memainkan ujung baju atau jari (fidgeting) karena gugup.", advice: "Berikan benda pegangan (mic/kertas) agar tangan tenang." },
+                2: { text: "Sudah mampu berdiri tegak, namun tangan masih terpaku di samping badan.", advice: "Mulai biasakan membuka tangan saat menyapa." },
+                3: { text: "Mulai menggunakan gerakan tangan sederhana untuk mendukung cerita.", advice: "Latih gerakan tangan yang lebih spesifik." },
+                4: { text: "Gerakan tubuh sangat luwes, natural, dan mendukung isi pesan.", advice: "Eksplorasi penggunaan panggung (stage movement)." }
+            },
+            emosi: {
+                1: { text: "Ekspresi wajah cenderung datar atau tegang, kontak mata sering ke bawah.", advice: "Ingatkan untuk tersenyum sebelum bicara." },
+                2: { text: "Sesekali tersenyum, namun kontak mata masih sering terputus.", advice: "Latih kontak mata dengan satu teman terdekat." },
+                3: { text: "Wajah mulai ekspresif sesuai dengan isi cerita (senang/sedih).", advice: "Latih transisi emosi yang lebih cepat." },
+                4: { text: "Sangat menjiwai, mata bercerita, dan mampu menarik audiens.", advice: "Tantang dengan materi yang lebih emosional." }
+            }
+        };
+
+        const adviceDB = {
+            low: {
+                title: "Fokus Utama: Membangun Rasa Aman",
+                content: "Saat ini, prioritas utama bukanlah teknik yang sempurna, melainkan membuat siswa merasa 'aman' berdiri di depan. Jangan terlalu banyak mengoreksi kesalahan. Berikan apresiasi berlebih pada keberaniannya untuk maju. Gunakan metode pendampingan atau maju berdua dengan teman agar beban mental berkurang."
+            },
+            mid: {
+                title: "Fokus Utama: Meningkatkan Konsistensi",
+                content: "Siswa sudah memiliki dasar keberanian yang baik. Langkah selanjutnya adalah meningkatkan konsistensi volume suara dan kontak mata. Dorong siswa untuk bercerita tentang hal yang paling ia sukai (hobi/mainan) agar antusiasmenya membantu melupakan rasa gugup."
+            },
+            high: {
+                title: "Fokus Utama: Polesan Akhir (Polishing)",
+                content: "Siswa memiliki bakat alami yang luar biasa. Tantangan dapat ditingkatkan dengan materi yang lebih kompleks atau durasi bicara yang lebih lama. Fokuskan latihan pada variasi vokal (cepat-lambat) dan penggunaan panggung agar penampilan terlihat seperti pembicara profesional cilik."
+            }
+        };
+
+        function generateNarrative() {
+            const name = document.getElementById('input-name').value || "Siswa";
+            const vokalScore = parseInt(document.getElementById('input-vokal').value);
+            const gesturScore = parseInt(document.getElementById('input-gestur').value);
+            const emosiScore = parseInt(document.getElementById('input-emosi').value);
+
+            // 1. Generate Observation Text
+            let obsText = `Secara umum, ${name} menunjukkan sikap yang positif dalam kegiatan kelas. `;
+            
+            // Logic for general opening
+            const avgScore = (vokalScore + gesturScore + emosiScore) / 3;
+            if (avgScore < 2) {
+                obsText += "Meskipun masih terlihat malu-malu dan gugup, keberaniannya untuk maju ke depan patut diacungi jempol. Ini adalah langkah awal yang sangat penting. ";
+            } else if (avgScore < 3.5) {
+                obsText += "Kepercayaan dirinya mulai tumbuh terlihat dari kesediaannya menyelesaikan tugas dengan baik. ";
+            } else {
+                obsText += "Penampilannya sangat memukau dan menunjukkan kematangan emosi serta teknik yang di atas rata-rata. ";
+            }
+
+            obsText += "\n\nDalam aspek teknis:\n";
+            obsText += "• Vokal: " + narrativeDB.vokal[vokalScore].text + "\n";
+            obsText += "• Gestur: " + narrativeDB.gestur[gesturScore].text + "\n";
+            obsText += "• Emosi: " + narrativeDB.emosi[emosiScore].text + "\n";
+
+            document.getElementById('observation-text').innerText = obsText;
+
+            // 2. Generate Context Blurbs (Small boxes)
+            document.getElementById('ctx-vokal').innerText = narrativeDB.vokal[vokalScore].text;
+            document.getElementById('ctx-gestur').innerText = narrativeDB.gestur[gesturScore].text;
+            document.getElementById('ctx-emosi').innerText = narrativeDB.emosi[emosiScore].text;
+
+            // 3. Generate Advice Text
+            let adviceContent = "";
+            let adviceLevel = "low";
+            if (avgScore >= 3.5) adviceLevel = "high";
+            else if (avgScore >= 2.5) adviceLevel = "mid";
+
+            adviceContent += adviceDB[adviceLevel].title + "\n\n";
+            adviceContent += adviceDB[adviceLevel].content + "\n\n";
+            adviceContent += "Langkah Konkret:\n";
+            adviceContent += "1. " + narrativeDB.vokal[vokalScore].advice + "\n";
+            adviceContent += "2. " + narrativeDB.gestur[gesturScore].advice + "\n";
+            adviceContent += "3. " + narrativeDB.emosi[emosiScore].advice;
+
+            document.getElementById('advice-text').innerText = adviceContent;
+
+            // 4. Update Action Plan Cards dynamically based on weakest link
+            let weakest = 'vokal';
+            let minScore = vokalScore;
+            
+            if (gesturScore < minScore) { weakest = 'gestur'; minScore = gesturScore; }
+            if (emosiScore < minScore) { weakest = 'emosi'; }
+
+            if (weakest === 'vokal') {
+                document.getElementById('plan-teach-1-title').innerText = "Metode Echoing";
+                document.getElementById('plan-teach-1-desc').innerText = "Ajak siswa menirukan teriakan pendek bersama-sama.";
+                document.getElementById('plan-parent-1-title').innerText = "Latihan A-I-U-E-O";
+                document.getElementById('plan-parent-1-desc').innerText = "Lomba buka mulut lebar di depan cermin.";
+            } else if (weakest === 'gestur') {
+                document.getElementById('plan-teach-1-title').innerText = "Penggunaan Properti";
+                document.getElementById('plan-teach-1-desc').innerText = "Berikan mic/boneka agar tangan tidak fidgeting.";
+                document.getElementById('plan-parent-1-title').innerText = "Main Patung";
+                document.getElementById('plan-parent-1-desc').innerText = "Latihan berdiri tegak tanpa gerak selama 10 detik.";
+            } else {
+                document.getElementById('plan-teach-1-title').innerText = "Roleplay Emosi";
+                document.getElementById('plan-teach-1-desc').innerText = "Tebak gaya wajah (sedih, marah, senang).";
+                document.getElementById('plan-parent-1-title').innerText = "Dongeng Ekspresif";
+                document.getElementById('plan-parent-1-desc').innerText = "Bacakan cerita dengan wajah yang berubah-ubah.";
+            }
+
+            alert("Narasi berhasil dibuat! Silakan cek bagian Catatan dan Saran.");
+        }
+
+        // --- Init Chart ---
+        function wrapText(str, maxChars) {
+            const words = str.split(' ');
+            const lines = [];
+            let currentLine = words[0];
+            for (let i = 1; i < words.length; i++) {
+                if ((currentLine + " " + words[i]).length <= maxChars) {
+                    currentLine += " " + words[i];
+                } else {
+                    lines.push(currentLine);
+                    currentLine = words[i];
+                }
+            }
+            lines.push(currentLine);
+            return lines;
+        }
+
+        const commonTooltip = {
+            callbacks: {
+                title: function(tooltipItems) {
+                    const item = tooltipItems[0];
+                    let label = item.chart.data.labels[item.dataIndex];
+                    if (Array.isArray(label)) return label.join(' ');
+                    return label;
+                }
+            }
+        };
+
+        const ctxRadar = document.getElementById('skillsRadarChart').getContext('2d');
+        const labelsRadar = ['Teknik Vokal (Suara)', 'Bahasa Tubuh (Gesture)', 'Ekspresi Emosi'];
+        const processedLabelsRadar = labelsRadar.map(l => wrapText(l, 16));
+
+        radarChart = new Chart(ctxRadar, {
+            type: 'radar',
+            data: {
+                labels: processedLabelsRadar,
+                datasets: [{
+                    label: 'Skor Saat Ini',
+                    data: [1, 1, 1],
+                    fill: true,
+                    backgroundColor: 'rgba(236, 72, 153, 0.2)',
+                    borderColor: 'rgb(236, 72, 153)',
+                    pointBackgroundColor: 'rgb(236, 72, 153)',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: 'rgb(236, 72, 153)'
+                }, {
+                    label: 'Target Ideal',
+                    data: [4, 4, 4],
+                    fill: true,
+                    backgroundColor: 'rgba(79, 70, 229, 0.05)',
+                    borderColor: 'rgba(79, 70, 229, 0.4)',
+                    pointBackgroundColor: 'rgba(79, 70, 229, 0.4)',
+                    pointBorderColor: '#fff',
+                    borderDash: [5, 5]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                elements: { line: { borderWidth: 3 } },
+                scales: {
+                    r: {
+                        angleLines: { display: true },
+                        suggestedMin: 0,
+                        suggestedMax: 4,
+                        ticks: { stepSize: 1, backdropColor: 'transparent' }
+                    }
+                },
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: commonTooltip
+                }
+            }
+        });
+        
+        // Initial setup for Ken Luana
+        document.getElementById('input-vokal').value = 1;
+        document.getElementById('input-gestur').value = 1;
+        document.getElementById('input-emosi').value = 1;
+        updateChartData(); // Visual update only
+        generateNarrative(); // Auto-generate initial text
+    </script>
+</body>
+</html>
